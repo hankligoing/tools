@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>天气查询</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .search-box {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      margin-bottom: 20px;
+    }
+
+    .search-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 12px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 14px 18px;
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .search-input:focus {
+      border-color: #667eea;
+    }
+
+    .search-btn {
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    .search-btn:hover:not(:disabled) {
+      transform: scale(1.02);
+    }
+
+    .search-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .location-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background: #f8f9fa;
+      color: #667eea;
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .location-btn:hover:not(:disabled) {
+      border-color: #667eea;
+      background: #f0f0ff;
+    }
+
+    .location-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .location-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .location-btn.loading svg {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .weather-card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      display: none;
+      position: relative;
+    }
+
+    .weather-card.show {
+      display: block;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .favorite-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      background: #f8f9fa;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .favorite-btn:hover {
+      background: #f0f0ff;
+      transform: scale(1.1);
+    }
+
+    .favorite-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke: #888;
+      fill: none;
+      transition: all 0.2s;
+    }
+
+    .favorite-btn.active svg {
+      stroke: #ff6b6b;
+      fill: #ff6b6b;
+    }
+
+    .location-name {
+      font-size: 28px;
+      font-weight: 600;
+      color: #333;
+      text-align: center;
+    }
+
+    .location-region {
+      font-size: 14px;
+      color: #888;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .current-temp {
+      font-size: 72px;
+      font-weight: 300;
+      color: #333;
+      text-align: center;
+      margin: 20px 0 10px;
+    }
+
+    .weather-condition {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+
+    .weather-icon {
+      width: 64px;
+      height: 64px;
+    }
+
+    .condition-text {
+      font-size: 20px;
+      color: #555;
+    }
+
+    .weather-details {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .detail-item {
+      text-align: center;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 12px;
+    }
+
+    .detail-icon {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 8px;
+    }
+
+    .detail-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .detail-label {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .feels-like {
+      text-align: center;
+      font-size: 14px;
+      color: #888;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+
+    .favorites-section {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      margin-bottom: 20px;
+    }
+
+    .favorites-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .favorites-title svg {
+      width: 20px;
+      height: 20px;
+      stroke: #667eea;
+    }
+
+    .favorites-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .favorites-empty {
+      color: #888;
+      font-size: 14px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .favorite-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #f8f9fa;
+      border: none;
+      border-radius: 20px;
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .favorite-item:hover {
+      background: #f0f0ff;
+    }
+
+    .favorite-item-name {
+      font-weight: 500;
+    }
+
+    .favorite-item-temp {
+      color: #888;
+      font-size: 12px;
+    }
+
+    .favorite-item-delete {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .favorite-item:hover .favorite-item-delete {
+      opacity: 1;
+    }
+
+    .favorite-item-delete svg {
+      width: 14px;
+      height: 14px;
+      stroke: #ff6b6b;
+    }
+
+    .error-message {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      text-align: center;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .error-icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+    }
+
+    .error-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .error-desc {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .loading-overlay.show {
+      display: flex;
+    }
+
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #e8e8e8;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="search-box">
+      <h1 class="search-title">天气查询</h1>
+      <form class="search-form" id="searchForm">
+        <input
+          type="text"
+          class="search-input"
+          id="cityInput"
+          placeholder="输入城市名称，如：北京"
+          autocomplete="off"
+        >
+        <button type="submit" class="search-btn" id="searchBtn">搜索</button>
+      </form>
+      <button type="button" class="location-btn" id="locationBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v4m0 12v4m10-10h-4M2 12h4m15.07-7.07l-2.83 2.83m-9.9 9.9l-2.83 2.83m0-15.56l2.83 2.83m9.9 9.9l2.83 2.83"/>
+        </svg>
+        <span id="locationBtnText">定位当前城市</span>
+      </button>
+    </div>
+
+    <div class="weather-card" id="weatherCard">
+      <button class="favorite-btn" id="favoriteBtn" title="收藏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+      </button>
+      <div class="location-name" id="locationName">-</div>
+      <div class="location-region" id="locationRegion">-</div>
+      <div class="current-temp" id="currentTemp">-°C</div>
+      <div class="weather-condition">
+        <img class="weather-icon" id="weatherIcon" src="" alt="">
+        <span class="condition-text" id="conditionText">-</span>
+      </div>
+      <div class="weather-details">
+        <div class="detail-item">
+          <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2">
+            <path d="M12 2v10m0 0c-4.5 0-7.5 3-7.5 7s3 7 7.5 7 7.5-3 7.5-7-3-7-7.5-7z"/>
+          </svg>
+          <div class="detail-value" id="humidity">-%</div>
+          <div class="detail-label">湿度</div>
+        </div>
+        <div class="detail-item">
+          <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2">
+            <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+          </svg>
+          <div class="detail-value" id="windSpeed">- km/h</div>
+          <div class="detail-label">风速</div>
+        </div>
+        <div class="detail-item">
+          <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <div class="detail-value" id="uvIndex">-</div>
+          <div class="detail-label">紫外线</div>
+        </div>
+      </div>
+      <div class="feels-like" id="feelsLike">体感温度 -°C · 更新时间 -</div>
+    </div>
+
+    <div class="favorites-section" id="favoritesSection">
+      <div class="favorites-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        我的收藏
+      </div>
+      <div class="favorites-list" id="favoritesList">
+        <div class="favorites-empty">暂无收藏城市</div>
+      </div>
+    </div>
+
+    <div class="error-message" id="errorMessage">
+      <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+      </svg>
+      <div class="error-title" id="errorTitle">查询失败</div>
+      <div class="error-desc" id="errorDesc">请稍后重试</div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div>
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loadingText">正在查询天气...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = window.location.origin;
+    const STORAGE_KEY = 'weather_favorites';
+
+    let currentWeatherData = null;
+
+    const elements = {
+      searchForm: document.getElementById('searchForm'),
+      cityInput: document.getElementById('cityInput'),
+      searchBtn: document.getElementById('searchBtn'),
+      locationBtn: document.getElementById('locationBtn'),
+      locationBtnText: document.getElementById('locationBtnText'),
+      weatherCard: document.getElementById('weatherCard'),
+      favoriteBtn: document.getElementById('favoriteBtn'),
+      favoritesSection: document.getElementById('favoritesSection'),
+      favoritesList: document.getElementById('favoritesList'),
+      errorMessage: document.getElementById('errorMessage'),
+      loadingOverlay: document.getElementById('loadingOverlay'),
+      loadingText: document.getElementById('loadingText'),
+      locationName: document.getElementById('locationName'),
+      locationRegion: document.getElementById('locationRegion'),
+      currentTemp: document.getElementById('currentTemp'),
+      weatherIcon: document.getElementById('weatherIcon'),
+      conditionText: document.getElementById('conditionText'),
+      humidity: document.getElementById('humidity'),
+      windSpeed: document.getElementById('windSpeed'),
+      uvIndex: document.getElementById('uvIndex'),
+      feelsLike: document.getElementById('feelsLike'),
+      errorTitle: document.getElementById('errorTitle'),
+      errorDesc: document.getElementById('errorDesc'),
+    };
+
+    function getFavorites() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveFavorites(favorites) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+    }
+
+    function isFavorite(cityName) {
+      const favorites = getFavorites();
+      return favorites.some(f => f.name === cityName);
+    }
+
+    function addFavorite(data) {
+      const favorites = getFavorites();
+      const cityName = data.location.name;
+
+      if (isFavorite(cityName)) return;
+
+      favorites.unshift({
+        name: cityName,
+        region: data.location.region,
+        country: data.location.country,
+        temp: Math.round(data.current.temp_c),
+        condition: data.current.condition.text,
+        query: cityName,
+      });
+
+      if (favorites.length > 10) {
+        favorites.pop();
+      }
+
+      saveFavorites(favorites);
+      renderFavorites();
+      updateFavoriteBtn();
+    }
+
+    function removeFavorite(cityName) {
+      let favorites = getFavorites();
+      favorites = favorites.filter(f => f.name !== cityName);
+      saveFavorites(favorites);
+      renderFavorites();
+      updateFavoriteBtn();
+    }
+
+    function renderFavorites() {
+      const favorites = getFavorites();
+
+      if (favorites.length === 0) {
+        elements.favoritesList.innerHTML = '<div class="favorites-empty">暂无收藏城市</div>';
+        return;
+      }
+
+      elements.favoritesList.innerHTML = favorites.map(f => `
+        <button class="favorite-item" data-query="${f.query}">
+          <span class="favorite-item-name">${f.name}</span>
+          <span class="favorite-item-temp">${f.temp}°</span>
+          <span class="favorite-item-delete" data-delete="${f.name}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </span>
+        </button>
+      `).join('');
+    }
+
+    function updateFavoriteBtn() {
+      if (!currentWeatherData) return;
+
+      const cityName = currentWeatherData.location.name;
+      if (isFavorite(cityName)) {
+        elements.favoriteBtn.classList.add('active');
+        elements.favoriteBtn.title = '取消收藏';
+      } else {
+        elements.favoriteBtn.classList.remove('active');
+        elements.favoriteBtn.title = '收藏';
+      }
+    }
+
+    function toggleFavorite() {
+      if (!currentWeatherData) return;
+
+      if (isFavorite(currentWeatherData.location.name)) {
+        removeFavorite(currentWeatherData.location.name);
+      } else {
+        addFavorite(currentWeatherData);
+      }
+    }
+
+    function showLoading(text = '正在查询天气...') {
+      elements.loadingOverlay.classList.add('show');
+      elements.loadingText.textContent = text;
+      elements.searchBtn.disabled = true;
+      elements.locationBtn.disabled = true;
+    }
+
+    function hideLoading() {
+      elements.loadingOverlay.classList.remove('show');
+      elements.searchBtn.disabled = false;
+      elements.locationBtn.disabled = false;
+    }
+
+    function showWeather() {
+      elements.weatherCard.classList.add('show');
+      elements.errorMessage.classList.remove('show');
+    }
+
+    function showError(title, description) {
+      elements.errorMessage.classList.add('show');
+      elements.weatherCard.classList.remove('show');
+      elements.errorTitle.textContent = title;
+      elements.errorDesc.textContent = description;
+    }
+
+    function hideAll() {
+      elements.weatherCard.classList.remove('show');
+      elements.errorMessage.classList.remove('show');
+    }
+
+    function setLocationLoading(loading) {
+      if (loading) {
+        elements.locationBtn.classList.add('loading');
+        elements.locationBtnText.textContent = '定位中...';
+      } else {
+        elements.locationBtn.classList.remove('loading');
+        elements.locationBtnText.textContent = '定位当前城市';
+      }
+    }
+
+    function formatTime(dateStr) {
+      const date = new Date(dateStr);
+      return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    function updateWeatherUI(data) {
+      currentWeatherData = data;
+      const { location, current } = data;
+
+      elements.locationName.textContent = location.name;
+      elements.locationRegion.textContent = `${location.country} · ${location.region}`;
+      elements.currentTemp.textContent = `${Math.round(current.temp_c)}°C`;
+      elements.weatherIcon.src = `https:${current.condition.icon}`;
+      elements.conditionText.textContent = current.condition.text;
+      elements.humidity.textContent = `${current.humidity}%`;
+      elements.windSpeed.textContent = `${Math.round(current.wind_kph)} km/h`;
+      elements.uvIndex.textContent = current.uv;
+      elements.feelsLike.textContent = `体感温度 ${Math.round(current.feelslike_c)}°C · 更新时间 ${formatTime(current.last_updated)}`;
+
+      updateFavoriteBtn();
+      showWeather();
+    }
+
+    function getFriendlyError(error) {
+      const message = error.message?.toLowerCase() || '';
+      const code = error.code || '';
+
+      if (message.includes('no matching') || message.includes('not found') || code === 'WSX1002') {
+        return { title: '找不到该城市', desc: '请检查城市名称是否正确' };
+      }
+      if (message.includes('quota') || message.includes('limit') || code === 'WSX1003') {
+        return { title: '请求次数超限', desc: '请稍后再试' };
+      }
+      if (message.includes('key') || message.includes('invalid') || code === 'WSX1009') {
+        return { title: 'API Key 无效', desc: '请检查 .env 文件中的 WEATHER_API_KEY' };
+      }
+
+      return { title: '查询失败', desc: '请稍后重试' };
+    }
+
+    async function fetchWeather(query) {
+      const response = await fetch(
+        `${API_BASE_URL}/api/weather?city=${encodeURIComponent(query)}`
+      );
+
+      const data = await response.json();
+
+      if (data.error) {
+        const error = new Error(data.error.message);
+        error.code = data.error.code;
+        throw error;
+      }
+
+      return data;
+    }
+
+    async function searchByQuery(query) {
+      hideAll();
+      showLoading();
+
+      try {
+        const weatherData = await fetchWeather(query);
+        updateWeatherUI(weatherData);
+      } catch (error) {
+        const errorInfo = getFriendlyError(error);
+        showError(errorInfo.title, errorInfo.desc);
+      } finally {
+        hideLoading();
+      }
+    }
+
+    function handleSearch(e) {
+      e.preventDefault();
+      const city = elements.cityInput.value.trim();
+      if (!city) {
+        showError('请输入城市', '在搜索框中输入城市名称');
+        return;
+      }
+      searchByQuery(city);
+    }
+
+    function getLocation() {
+      if (!navigator.geolocation) {
+        showError('浏览器不支持定位', '请使用其他方式查询天气');
+        return;
+      }
+
+      setLocationLoading(true);
+      showLoading('正在获取位置...');
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const coords = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+
+          showLoading('正在查询天气...');
+
+          fetchWeather(coords)
+            .then(updateWeatherUI)
+            .catch((error) => {
+              const errorInfo = getFriendlyError(error);
+              showError(errorInfo.title, errorInfo.desc);
+            })
+            .finally(() => {
+              hideLoading();
+              setLocationLoading(false);
+            });
+        },
+        (error) => {
+          setLocationLoading(false);
+          hideLoading();
+
+          let title, desc;
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              title = '定位权限被拒绝';
+              desc = '请在浏览器设置中允许定位，然后重试';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              title = '无法获取位置';
+              desc = '当前位置信息不可用，请检查网络';
+              break;
+            case error.TIMEOUT:
+              title = '定位超时';
+              desc = '获取位置超时，请重试';
+              break;
+            default:
+              title = '定位失败';
+              desc = '请稍后重试';
+          }
+
+          showError(title, desc);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    }
+
+    elements.searchForm.addEventListener('submit', handleSearch);
+    elements.locationBtn.addEventListener('click', getLocation);
+    elements.favoriteBtn.addEventListener('click', toggleFavorite);
+
+    elements.favoritesList.addEventListener('click', (e) => {
+      const deleteBtn = e.target.closest('[data-delete]');
+      if (deleteBtn) {
+        e.stopPropagation();
+        removeFavorite(deleteBtn.dataset.delete);
+        return;
+      }
+
+      const item = e.target.closest('[data-query]');
+      if (item) {
+        searchByQuery(item.dataset.query);
+      }
+    });
+
+    elements.cityInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        elements.searchForm.dispatchEvent(new Event('submit'));
+      }
+    });
+
+    renderFavorites();
+  </script>
+</body>
+</html>

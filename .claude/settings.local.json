@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/apple/Project/VibeCoding/个人工具开发/天气查询应用/src)"
+    ],
+    "additionalDirectories": [
+      "/Users/apple/Project/VibeCoding/个人工具开发/天气查询应用"
+    ]
+  }
+}
